@@ -4,16 +4,27 @@
 
     export let thickness = 0.1;
 
+    type ProgramInfo = {
+        program: WebGLProgram,
+        attribLocations: {
+            vertexPosition: number,
+        },
+        uniformLocations: {
+            projectionMatrix: WebGLUniformLocation,
+            modelViewMatrix: WebGLUniformLocation,
+        },
+    };
+
     let width = 800;
     let height = 600;
 
     let canvas: HTMLCanvasElement;
     let gl: WebGLRenderingContext;
-    let programInfo;
+    let programInfo: ProgramInfo;
     let buffers;
 
     onMount(() => {
-        gl = canvas.getContext("webgl");
+        gl = canvas.getContext("webgl") as WebGLRenderingContext;
 
         if (!gl) {
             console.error("WebGL not supported");
@@ -38,7 +49,7 @@
         `;
 
         // Initialize a shader program
-        const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+        const shaderProgram = initShaderProgram(gl, vsSource, fsSource)!;
 
         // Collect all the info needed to use the shader program.
         programInfo = {
@@ -47,8 +58,8 @@
                 vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
             },
             uniformLocations: {
-                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-                modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix')!,
+                modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix')!,
             },
         };
 
@@ -64,9 +75,9 @@
         drawScene(gl, programInfo, buffers);
     })
 
-    function initShaderProgram(gl, vsSource, fsSource) {
-        const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-        const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+    function initShaderProgram(gl: WebGLRenderingContext, vsSource: string, fsSource: string) {
+        const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource)!;
+        const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource)!;
 
         // Create the shader program
         const shaderProgram = gl.createProgram();
@@ -83,8 +94,8 @@
         return shaderProgram;
     }
 
-    function loadShader(gl, type, source) {
-        const shader = gl.createShader(type);
+    function loadShader(gl: WebGLRenderingContext, type: number, source: string) {
+        const shader = gl.createShader(type)!;
 
         // Send the source to the shader object
         gl.shaderSource(shader, source);
@@ -102,7 +113,7 @@
         return shader;
     }
 
-    function initBuffers(gl) {
+    function initBuffers(gl: WebGLRenderingContext) {
         // Create a buffer for the square's positions.
         const positionBuffer = gl.createBuffer();
 
@@ -144,7 +155,7 @@
         };
     }
 
-    function drawScene(gl, programInfo, buffers) {
+    function drawScene(gl: WebGLRenderingContext, programInfo: ProgramInfo, buffers: { position: WebGLBuffer}) {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
         gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -155,7 +166,7 @@
 
         // Create a perspective matrix, a special matrix that is used to simulate the distortion of perspective in a camera. Our field of view is 45 degrees, with a width/height ratio that matches the display size of the canvas and we only want to see objects between 0.1 units and 100 units away from the camera.
         const fieldOfView = 45 * Math.PI / 180;   // in radians
-        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+        const aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
         const zNear = 0.1;
         const zFar = 100.0;
         const projectionMatrix = mat4.create();
