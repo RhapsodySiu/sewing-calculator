@@ -1,8 +1,13 @@
 <script lang="ts">
-    import { afterUpdate, onMount } from "svelte";
+    import { onMount } from "svelte";
+    import * as THREE from "three";
     import { mat4 } from "gl-matrix";
 
-    export let thickness = 0.1;
+    export let thickness = 2;
+    export let width = 10.5;
+    export let height = 14.8;
+
+    const SCALE = 0.01;
 
     type ProgramInfo = {
         program: WebGLProgram,
@@ -15,225 +20,54 @@
         },
     };
 
-    let width = 800;
-    let height = 600;
+    let canvasWidth = 800;
+    let canvasHeight = 600;
 
     let canvas: HTMLCanvasElement;
-    let gl: WebGLRenderingContext;
-    let programInfo: ProgramInfo;
-    let buffers;
+    let scene: THREE.Scene;
+    let camera: THREE.PerspectiveCamera;
+    let renderer: THREE.WebGLRenderer;
+    let mesh: THREE.Mesh;
 
     onMount(() => {
-        gl = canvas.getContext("webgl") as WebGLRenderingContext;
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, canvasWidth / canvasHeight, 0.1, 1000);
+        camera.position.z = 0.2;
 
-        if (!gl) {
-            console.error("WebGL not supported");
-            return;
-        }
+        renderer = new THREE.WebGLRenderer({ canvas });
+        renderer.setSize(canvasWidth, canvasHeight);
 
-        // Vertex shader program
-        const vsSource = `
-            attribute vec4 aVertexPosition;
-            uniform mat4 uModelViewMatrix;
-            uniform mat4 uProjectionMatrix;
-            void main(void) {
-                gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-            }
-        `;
+        const geometry = new THREE.BoxGeometry(width * SCALE, height * SCALE, thickness * SCALE);
+        const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
 
-        // Fragment shader program
-        const fsSource = `
-            void main(void) {
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-            }
-        `;
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(-1, 1, 1).normalize(); // Top left forward the camera
+        scene.add(light);
 
-        // Initialize a shader program
-        const shaderProgram = initShaderProgram(gl, vsSource, fsSource)!;
+        const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        scene.add(ambientLight);
 
-        // Collect all the info needed to use the shader program.
-        programInfo = {
-            program: shaderProgram,
-            attribLocations: {
-                vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-            },
-            uniformLocations: {
-                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix')!,
-                modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix')!,
-            },
-        };
-
-        // Load vertex data into the GPU
-        buffers = initBuffers(gl);
-
-        // Draw the scene
-        drawScene(gl, programInfo, buffers);
+        animate();
     });
 
-    afterUpdate(() => {
-        buffers = initBuffers(gl);
-        drawScene(gl, programInfo, buffers);
-    })
-
-    function initShaderProgram(gl: WebGLRenderingContext, vsSource: string, fsSource: string) {
-        const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource)!;
-        const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource)!;
-
-        // Create the shader program
-        const shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
-
-        // If creating the shader program failed, alert
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-            console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
-            return null;
-        }
-
-        return shaderProgram;
+    $: if (mesh) {
+        mesh.geometry.dispose();
+        mesh.geometry = new THREE.BoxGeometry(width * SCALE, height * SCALE, thickness * SCALE);
     }
 
-    function loadShader(gl: WebGLRenderingContext, type: number, source: string) {
-        const shader = gl.createShader(type)!;
+    function animate() {
+        requestAnimationFrame(animate);
 
-        // Send the source to the shader object
-        gl.shaderSource(shader, source);
+        mesh.rotation.x += 0.01;
+        mesh.rotation.y += 0.01;
 
-        // Compile the shader program
-        gl.compileShader(shader);
-
-        // See if it compiled successfully
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
-            gl.deleteShader(shader);
-            return null;
-        }
-
-        return shader;
-    }
-
-    function initBuffers(gl: WebGLRenderingContext) {
-        // Create a buffer for the square's positions.
-        const positionBuffer = gl.createBuffer();
-
-        // Select the positionBuffer as the one to apply buffer operations to from here out.
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-        // Now create an array of positions for the square.
-        const positions = [
-            // Front face
-            -1.0, -1.0, thickness,
-            1.0, -1.0, thickness,
-            1.0,  1.0, thickness,
-            -1.0,  1.0, thickness,
-
-            // Back face
-            -1.0, -1.0, -thickness,
-            -1.0,  1.0, -thickness,
-            1.0,  1.0, -thickness,
-            1.0, -1.0, -thickness,
-
-            // Top face
-            -1.0,  1.0, -thickness,
-            -1.0,  1.0,  thickness,
-            1.0,  1.0,  thickness,
-            1.0,  1.0, -thickness,
-
-            // Bottom face
-            -1.0, -1.0, -thickness,
-            1.0, -1.0, -thickness,
-            1.0, -1.0,  thickness,
-            -1.0, -1.0,  thickness,
-        ];
-
-        // Now pass the list of positions into WebGL to build the shape. We do this by creating a Float32Array from the JavaScript array, then use it to fill the current buffer.
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-        return {
-            position: positionBuffer,
-        };
-    }
-
-    function drawScene(gl: WebGLRenderingContext, programInfo: ProgramInfo, buffers: { position: WebGLBuffer}) {
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
-        gl.clearDepth(1.0);                 // Clear everything
-        gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-        gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
-
-        // Clear the canvas before we start drawing on it.
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        // Create a perspective matrix, a special matrix that is used to simulate the distortion of perspective in a camera. Our field of view is 45 degrees, with a width/height ratio that matches the display size of the canvas and we only want to see objects between 0.1 units and 100 units away from the camera.
-        const fieldOfView = 45 * Math.PI / 180;   // in radians
-        const aspect = (gl.canvas as HTMLCanvasElement).clientWidth / (gl.canvas as HTMLCanvasElement).clientHeight;
-        const zNear = 0.1;
-        const zFar = 100.0;
-        const projectionMatrix = mat4.create();
-
-        mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
-
-        // Set the drawing position to the "identity" point, which is the center of the scene.
-        const modelViewMatrix = mat4.create();
-
-        // Now move the drawing position a bit to where we want to start drawing the square.
-        mat4.translate(modelViewMatrix,     // destination matrix
-                       modelViewMatrix,     // matrix to translate
-                       [-0.0, 0.0, -6.0]);  // amount to translate
-
-        // Rotate the cube around the X axis
-        mat4.rotate(modelViewMatrix,  // destination matrix
-                    modelViewMatrix,  // matrix to rotate
-                    Math.PI / 4,      // amount to rotate in radians
-                    [1, 0, 0]);       // axis to rotate around (X)
-
-        // Rotate the cube around the Y axis
-        mat4.rotate(modelViewMatrix,  // destination matrix
-                    modelViewMatrix,  // matrix to rotate
-                    Math.PI / 4,      // amount to rotate in radians
-                    [0, 1, 0]);       // axis to rotate around (Y)
-
-        // Tell WebGL how to pull out the positions from the position buffer into the vertexPosition attribute.
-        {
-            const numComponents = 3;
-            const type = gl.FLOAT;
-            const normalize = false;
-            const stride = 0;
-            const offset = 0;
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-            gl.vertexAttribPointer(
-                programInfo.attribLocations.vertexPosition,
-                numComponents,
-                type,
-                normalize,
-                stride,
-                offset);
-            gl.enableVertexAttribArray(
-                programInfo.attribLocations.vertexPosition);
-        }
-
-        // Tell WebGL to use our program when drawing
-        gl.useProgram(programInfo.program);
-
-        // Set the shader uniforms
-        gl.uniformMatrix4fv(
-            programInfo.uniformLocations.projectionMatrix,
-            false,
-            projectionMatrix);
-        gl.uniformMatrix4fv(
-            programInfo.uniformLocations.modelViewMatrix,
-            false,
-            modelViewMatrix);
-
-        {
-            const offset = 0;
-            const vertexCount = 24;
-            gl.drawArrays(gl.TRIANGLE_STRIP, offset, vertexCount);
-        }
+        renderer.render(scene, camera);
     }
 </script>
 
-<canvas bind:this={canvas} width={width} height={height}></canvas>
+<canvas bind:this={canvas} width={canvasWidth} height={canvasHeight}></canvas>
 
 <style>
     canvas {
