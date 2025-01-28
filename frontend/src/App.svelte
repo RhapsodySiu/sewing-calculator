@@ -8,6 +8,8 @@
     B6: { width: 12.5, height: 17.6 },
     B5: { width: 17.6, height: 25 },
     B4: { width: 25, height: 35.3 },
+    Square: { width: 10, height: 8 },
+    Passport: { width: 8.8, height: 12.5 },
     Mini: { width: 5, height: 6 },
   } as const;
 
@@ -30,6 +32,10 @@
 
 <main>
   <h1>Sewing calculator</h1>
+  <p>
+    This tool helps you generate a sewing pattern for a pouch based on the
+    dimensions you provide.
+  </p>
   <form>
     <div class="form-row">
       <label for="thickness">Thickness:</label>
@@ -53,18 +59,25 @@
         bind:value={roundness}
       /> cm
     </div>
-    <div class="form-row">
-      <label for="seamAllowance">SA:</label>
-      <input type="number" id="sa" bind:value={seamAllowance} /> cm
-    </div>
-    <div class="form-row">
+    <section>
+      <h2>Preview config</h2>
+      <div class="form-row">
       <label for="fabricColor">Fabric color:</label>
       <input type="color" id="fabricColor" bind:value={fabricColor} />
-    </div>
-    <div class="form-row">
+      </div>
+      <div class="form-row">
       <label for="zipperColor">Zipper color:</label>
       <input type="color" id="zipperColor" bind:value={zipperColor} />
-    </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Pattern config</h2>
+      <div class="form-row">
+        <label for="seamAllowance">Seam allowance:</label>
+        <input type="number" id="seamAllowance" bind:value={seamAllowance} step="0.1" /> cm
+      </div>
+    </section>
     <div class="form-row">
       <button type="button" onclick={generate} class="generate-button"
         >Generate</button
@@ -73,6 +86,7 @@
   </form>
 </main>
 
+<p>Preview</p>
 <WebGl
   {thickness}
   {width}
@@ -114,16 +128,16 @@
   }
 
   .generate-button {
-    background-color: #374d38;
-    color: white;
+    background-color: #ecb9bf;
+    color: black;
     padding: 10px 20px;
     border: none;
-    border-radius: 5px;
+    border-radius: 20px;
     cursor: pointer;
     font-size: 16px;
   }
 
   .generate-button:hover {
-    background-color: #45a049;
+    background-color: #b37291;
   }
 </style>

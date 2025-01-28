@@ -58,8 +58,8 @@
         const gradientGeometry = new THREE.PlaneGeometry(2, 2);
         const gradientMaterial = new THREE.ShaderMaterial({
             uniforms: {
-                color1: { value: new THREE.Color(0x8e9eab) },
-                color2: { value: new THREE.Color(0xeef2f3) },
+                color1: { value: new THREE.Color(0xababab) },
+                color2: { value: new THREE.Color(0xeeeeee) },
             },
             vertexShader: `
                 varying vec2 vUv;
@@ -94,13 +94,14 @@
             new THREE.MeshPhongMaterial({ color: colors[1] }),
         ];
         mesh = new THREE.Mesh(geometry, materials);
+        mesh.rotation.set(-0.48, 0.65, -2.6);
         scene.add(mesh);
 
         const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(-1, 1, 1).normalize(); // Top left forward the camera
+        light.position.set(0.5, 1, 1).normalize(); // Top right forward the camera
         scene.add(light);
 
-        const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
+        const ambientLight = new THREE.AmbientLight(0x808080); // soft white light
         scene.add(ambientLight);
 
         // Add event listeners for mouse interaction
