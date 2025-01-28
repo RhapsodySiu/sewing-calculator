@@ -135,6 +135,8 @@
                     material.color.set(colors[i]);
                 },
             );
+
+            mesh.rotation.set(-0.48, 0.65, -2.6);
         }
     }
 
