@@ -4,5 +4,5 @@ Side project that generates simple sewing pattern
 
 ## TODO
 
-- Use dotenv to load python config
+- Support more layout
 - UI enhancement

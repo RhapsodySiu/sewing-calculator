@@ -19,11 +19,8 @@ def test():
     thickness = data.get('thickness')
     roundness = data.get('roundness')
     name = data.get('name')
-
-    print(width)
-    print(height)
     
-    pdf_output = generate_pdf()
+    pdf_output = generate_pdf(name, width, height, thickness, roundness)
     return send_file(pdf_output, download_name="test.pdf", mimetype="application/pdf", as_attachment=True)
 
 if __name__ == '__main__':
