@@ -1,4 +1,6 @@
 <script lang="ts">
+  import throttle from "lodash/throttle";
+  import { getPdf } from "./api";
   import WebGl from "./WebGL.svelte";
 
   const DIMENSION_LOOKUP = {
@@ -25,57 +27,78 @@
   let width = $derived(DIMENSION_LOOKUP[dimension].width + SPACING);
   let height = $derived(DIMENSION_LOOKUP[dimension].height + SPACING * 2);
 
+  const throttledGenerate = throttle(async function generate() {
+    try {
+      await getPdf({
+        name: dimension,
+        width,
+        height,
+        thickness,
+        roundness,
+        seamAllowance,
+      });
+    } catch (error) {
+      alert("Failed to generate the document. Please try again later.");
+    }
+  }, 2000); // 2 seconds throttle
+
   function generate() {
-    // Empty handler
+    throttledGenerate();
   }
 </script>
 
 <main>
   <h1>Sewing calculator</h1>
   <p>
-    This tool helps you generate a sewing pattern for a pouch based on the
+    Generate a sewing pattern for a pouch based on the
     dimensions you provide.
   </p>
   <form>
-    <div class="form-row">
-      <label for="thickness">Thickness:</label>
-      <input type="number" id="thickness" bind:value={thickness} step="0.1" /> cm
-    </div>
-    <div class="form-row">
-      <label for="dimension">Dimension:</label>
-      <select id="dimension" bind:value={dimension}>
-        {#each Object.keys(DIMENSION_LOOKUP) as dim}
-          <option value={dim}>{dim}</option>
-        {/each}
-      </select>
-    </div>
-    <div class="form-row">
-      <label for="roundness">Roundness:</label>
-      <input
-        type="number"
-        min="0"
-        max="5"
-        id="roundness"
-        bind:value={roundness}
-      /> cm
-    </div>
     <section>
       <h2>Preview config</h2>
       <div class="form-row">
-      <label for="fabricColor">Fabric color:</label>
-      <input type="color" id="fabricColor" bind:value={fabricColor} />
+        <label for="fabricColor">Fabric color:</label>
+        <input type="color" id="fabricColor" bind:value={fabricColor} />
       </div>
       <div class="form-row">
-      <label for="zipperColor">Zipper color:</label>
-      <input type="color" id="zipperColor" bind:value={zipperColor} />
+        <label for="zipperColor">Zipper color:</label>
+        <input type="color" id="zipperColor" bind:value={zipperColor} />
       </div>
     </section>
 
     <section>
       <h2>Pattern config</h2>
       <div class="form-row">
+        <label for="thickness">Thickness:</label>
+        <input type="number" id="thickness" bind:value={thickness} step="0.1" />
+        cm
+      </div>
+      <div class="form-row">
+        <label for="dimension">Dimension:</label>
+        <select id="dimension" bind:value={dimension}>
+          {#each Object.keys(DIMENSION_LOOKUP) as dim}
+            <option value={dim}>{dim}</option>
+          {/each}
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="roundness">Roundness:</label>
+        <input
+          type="number"
+          min="0"
+          max="5"
+          id="roundness"
+          bind:value={roundness}
+        /> cm
+      </div>
+      <div class="form-row">
         <label for="seamAllowance">Seam allowance:</label>
-        <input type="number" id="seamAllowance" bind:value={seamAllowance} step="0.1" /> cm
+        <input
+          type="number"
+          id="seamAllowance"
+          bind:value={seamAllowance}
+          step="0.1"
+        /> cm
       </div>
     </section>
     <div class="form-row">
@@ -111,6 +134,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 1em;
   }
 
   label {

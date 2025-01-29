@@ -6,6 +6,6 @@
         "venv": "./backend/.venv/Scripts/activate",
         "install:backend": "cd backend && pip install -r requirements.txt",
         "dev:frontend": "cd frontend && npm run dev",
-        "dev:backend": "cd backend && flask --app app.main run"
+        "dev:backend": "cd backend && run-backend.bat"
     }
 }
